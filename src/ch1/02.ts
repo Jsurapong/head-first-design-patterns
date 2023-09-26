@@ -77,3 +77,4 @@ function main() {
 }
 
 main();
+export {};
