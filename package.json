@@ -1,10 +1,11 @@
 {
   "scripts": {
-    "dev": "nodemon"
+    "test": "node ./dist/main.js"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "ts-node": "^10.9.1"
   }
 }
