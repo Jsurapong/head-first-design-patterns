@@ -39,6 +39,37 @@ class Stereo {
   }
 }
 
+enum Speed {
+  OFF = 0,
+  LOW,
+  MEDIUM,
+  HIGH,
+}
+class CeilingFan {
+  speed: Speed = Speed.OFF;
+  constructor(public location: string) {}
+
+  high() {
+    this.speed = Speed.HIGH;
+    console.log(this.location + " ceiling fan high");
+  }
+  medium() {
+    this.speed = Speed.MEDIUM;
+    console.log(this.location + " ceiling fan medium");
+  }
+  low() {
+    this.speed = Speed.LOW;
+    console.log(this.location + " ceiling fan low");
+  }
+  off() {
+    this.speed = Speed.OFF;
+    console.log(this.location + " ceiling fan off");
+  }
+  getSpeed() {
+    return this.speed;
+  }
+}
+
 interface Command {
   execute(): void;
   undo(): void;
@@ -90,6 +121,61 @@ class StereoOnWithCDCommand implements Command {
   }
   undo(): void {
     this.stereo.off();
+  }
+}
+
+abstract class CeilingFanCommand implements Command {
+  prevSpeed = Speed.OFF;
+  constructor(public ceilingFan: CeilingFan) {}
+  execute(): void {
+    this.prevSpeed = this.ceilingFan.getSpeed();
+    this.setCeilingFanSpeed();
+  }
+
+  abstract setCeilingFanSpeed(): void;
+  undo(): void {
+    if (this.prevSpeed === Speed.HIGH) {
+      this.ceilingFan.high();
+    } else if (this.prevSpeed === Speed.MEDIUM) {
+      this.ceilingFan.medium();
+    } else if (this.prevSpeed === Speed.LOW) {
+      this.ceilingFan.low();
+    } else if (this.prevSpeed === Speed.OFF) {
+      this.ceilingFan.off();
+    }
+  }
+}
+
+class CeilingFanHighCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.high();
+  }
+}
+
+class CeilingFanMediumCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.medium();
+  }
+}
+
+class CeilingFanOffCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.off();
+  }
+}
+
+class MacroCommand implements Command {
+  constructor(public commands: Command[]) {}
+
+  execute(): void {
+    for (let command of this.commands) {
+      command.execute();
+    }
+  }
+  undo(): void {
+    for (let i = this.commands.length - 1; i >= 0; i--) {
+      this.commands[i].undo();
+    }
   }
 }
 
@@ -147,30 +233,43 @@ class RemoteControlWithUndo {
 }
 
 function main() {
-  let remote = new RemoteControlWithUndo();
+  let remoteControl = new RemoteControlWithUndo();
 
+  let ceilingFan = new CeilingFan("Living Room");
   let livingRoomLight = new Light("Living Room");
-  //   let kitchenLight = new Light("Kitchen");
+  let kitchenLight = new Light("Kitchen");
+
+  let ceilingFanHighCommand = new CeilingFanHighCommand(ceilingFan);
+  let ceilingFanOffCommand = new CeilingFanOffCommand(ceilingFan);
 
   let livingRoomLightOn = new LightOnCommand(livingRoomLight);
   let livingRoomLightOff = new LightOffCommand(livingRoomLight);
 
-  //   let kitchenLightOn = new LightOnCommand(kitchenLight);
-  //   let kitchenLightOff = new LightOffCommand(kitchenLight);
+  let kitchenLightOn = new LightOnCommand(kitchenLight);
+  let kitchenLightOff = new LightOffCommand(kitchenLight);
 
-  remote.setCommand(0, livingRoomLightOn, livingRoomLightOff);
-  //   remote.setCommand(1, kitchenLightOn, kitchenLightOff);
+  let partyOn: Command[] = [
+    ceilingFanHighCommand,
+    livingRoomLightOn,
+    kitchenLightOn,
+  ];
 
-  //   remote.print();
+  let partyOff: Command[] = [
+    ceilingFanOffCommand,
+    livingRoomLightOff,
+    kitchenLightOff,
+  ];
 
-  remote.onButtonWasPressed(0);
-  remote.offButtonWasPressed(0);
-  remote.undoButtonWasPressed();
-  remote.print();
+  let partyOnMacro = new MacroCommand(partyOn);
+  let partyOffMacro = new MacroCommand(partyOff);
 
-  remote.offButtonWasPressed(0);
-  remote.onButtonWasPressed(0);
-  remote.undoButtonWasPressed();
-  remote.print();
+  remoteControl.setCommand(0, partyOnMacro, partyOffMacro);
+  remoteControl.print();
+  console.log("--- Pushing Macro On---");
+  remoteControl.onButtonWasPressed(0);
+  console.log("--- Pushing Macro off---");
+  remoteControl.offButtonWasPressed(0);
+  console.log("--- Pushing Macro undo---");
+  remoteControl.undoButtonWasPressed();
 }
 main();

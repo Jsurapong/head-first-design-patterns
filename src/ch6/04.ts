@@ -39,6 +39,37 @@ class Stereo {
   }
 }
 
+enum Speed {
+  OFF = 0,
+  LOW,
+  MEDIUM,
+  HIGH,
+}
+class CeilingFan {
+  speed: Speed = Speed.OFF;
+  constructor(public location: string) {}
+
+  high() {
+    this.speed = Speed.HIGH;
+    console.log(this.location + " ceiling fan high");
+  }
+  medium() {
+    this.speed = Speed.MEDIUM;
+    console.log(this.location + " ceiling fan medium");
+  }
+  low() {
+    this.speed = Speed.LOW;
+    console.log(this.location + " ceiling fan low");
+  }
+  off() {
+    this.speed = Speed.OFF;
+    console.log(this.location + " ceiling fan off");
+  }
+  getSpeed() {
+    return this.speed;
+  }
+}
+
 interface Command {
   execute(): void;
   undo(): void;
@@ -90,6 +121,46 @@ class StereoOnWithCDCommand implements Command {
   }
   undo(): void {
     this.stereo.off();
+  }
+}
+
+abstract class CeilingFanCommand implements Command {
+  prevSpeed = Speed.OFF;
+  constructor(public ceilingFan: CeilingFan) {}
+  execute(): void {
+    this.prevSpeed = this.ceilingFan.getSpeed();
+    this.setCeilingFanSpeed();
+  }
+
+  abstract setCeilingFanSpeed(): void;
+  undo(): void {
+    if (this.prevSpeed === Speed.HIGH) {
+      this.ceilingFan.high();
+    } else if (this.prevSpeed === Speed.MEDIUM) {
+      this.ceilingFan.medium();
+    } else if (this.prevSpeed === Speed.LOW) {
+      this.ceilingFan.low();
+    } else if (this.prevSpeed === Speed.OFF) {
+      this.ceilingFan.off();
+    }
+  }
+}
+
+class CeilingFanHighCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.high();
+  }
+}
+
+class CeilingFanMediumCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.medium();
+  }
+}
+
+class CeilingFanOffCommand extends CeilingFanCommand {
+  setCeilingFanSpeed(): void {
+    this.ceilingFan.off();
   }
 }
 
@@ -147,30 +218,23 @@ class RemoteControlWithUndo {
 }
 
 function main() {
-  let remote = new RemoteControlWithUndo();
+  let remoteControl = new RemoteControlWithUndo();
 
-  let livingRoomLight = new Light("Living Room");
-  //   let kitchenLight = new Light("Kitchen");
+  let ceilingFan = new CeilingFan("Living Room");
+  let ceilingFanHighCommand = new CeilingFanHighCommand(ceilingFan);
+  let ceilingFanMediumCommand = new CeilingFanMediumCommand(ceilingFan);
+  let ceilingFanOffCommand = new CeilingFanOffCommand(ceilingFan);
 
-  let livingRoomLightOn = new LightOnCommand(livingRoomLight);
-  let livingRoomLightOff = new LightOffCommand(livingRoomLight);
+  remoteControl.setCommand(0, ceilingFanMediumCommand, ceilingFanOffCommand);
+  remoteControl.setCommand(1, ceilingFanHighCommand, ceilingFanOffCommand);
 
-  //   let kitchenLightOn = new LightOnCommand(kitchenLight);
-  //   let kitchenLightOff = new LightOffCommand(kitchenLight);
+  remoteControl.onButtonWasPressed(0);
+  remoteControl.offButtonWasPressed(0);
+  remoteControl.print();
+  remoteControl.undoButtonWasPressed();
 
-  remote.setCommand(0, livingRoomLightOn, livingRoomLightOff);
-  //   remote.setCommand(1, kitchenLightOn, kitchenLightOff);
-
-  //   remote.print();
-
-  remote.onButtonWasPressed(0);
-  remote.offButtonWasPressed(0);
-  remote.undoButtonWasPressed();
-  remote.print();
-
-  remote.offButtonWasPressed(0);
-  remote.onButtonWasPressed(0);
-  remote.undoButtonWasPressed();
-  remote.print();
+  remoteControl.onButtonWasPressed(1);
+  remoteControl.print();
+  remoteControl.undoButtonWasPressed();
 }
 main();
